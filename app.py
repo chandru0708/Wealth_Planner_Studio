@@ -1,175 +1,401 @@
-import os
-import joblib
-import numpy as np
-import pandas as pd
 from flask import Flask, render_template, request, jsonify
+from werkzeug.exceptions import HTTPException
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ARTIFACT_PATH = os.path.join(BASE_DIR, 'models', 'artifacts.joblib')
+from services.ml_service import (
+    predict_risk_profile,
+    get_model_metrics,
+    get_feature_importance,
+    get_confusion_matrix,
+    get_roc_curve_data,
+    get_ml_evidence_bundle
+)
+
+from services.nlp_service import (
+    analyze_text,
+    get_nlp_evidence_bundle
+)
+
+from services.slm_service import (
+    generate_advice_summary,
+    generate_report_snippet,
+    generate_actionable_recommendations,
+    respond_to_user_query,
+    get_slm_evidence_bundle
+)
+
+from services.genai_service import (
+    simulate_scenarios,
+    get_genai_evidence_bundle
+)
+
+from services.agent_service import run_agent
+
+from services.dl_service import (
+    simulate_dl_forecast,
+    compare_with_ml_baseline,
+    get_dl_evidence_bundle
+)
 
 app = Flask(__name__)
 
 
-def load_artifacts():
-    if not os.path.exists(ARTIFACT_PATH):
-        return None
-    return joblib.load(ARTIFACT_PATH)
+class APIValidationError(Exception):
+    def __init__(self, message, status_code=400):
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code
 
 
-ART = load_artifacts()
+@app.errorhandler(APIValidationError)
+def handle_api_validation_error(error):
+    return jsonify({
+        'status': 'error',
+        'message': error.message
+    }), error.status_code
 
 
-def compute_features(age, income, expense, savings, debt, dependents, years):
-    annual_income = income * 12
-    annual_expenses = expense * 12
-    annual_savings_capacity = max((income - expense) * 12, 0)
-    savings_rate = 0 if income <= 0 else (income - expense) / income
-    debt_to_income = 0 if annual_income <= 0 else debt / annual_income
-    emergency_months = 0 if expense <= 0 else savings / expense
+@app.errorhandler(HTTPException)
+def handle_http_exception(error):
+    return jsonify({
+        'status': 'error',
+        'message': error.description,
+        'code': error.code
+    }), error.code
+
+
+@app.errorhandler(Exception)
+def handle_generic_exception(error):
+    return jsonify({
+        'status': 'error',
+        'message': str(error)
+    }), 500
+
+
+def get_json_data():
+    data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        raise APIValidationError('Invalid JSON body. Expected a JSON object.')
+    return data
+
+
+def parse_int(data, key, default=None, minimum=None, maximum=None, required=False):
+    value = data.get(key, default)
+
+    if required and (value is None or value == ''):
+        raise APIValidationError(f'Missing required field: {key}')
+
+    if value in (None, ''):
+        return default
+
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        raise APIValidationError(f'Field "{key}" must be an integer')
+
+    if minimum is not None and value < minimum:
+        raise APIValidationError(f'Field "{key}" must be at least {minimum}')
+
+    if maximum is not None and value > maximum:
+        raise APIValidationError(f'Field "{key}" must be at most {maximum}')
+
+    return value
+
+
+def parse_float(data, key, default=None, minimum=None, maximum=None, required=False):
+    value = data.get(key, default)
+
+    if required and (value is None or value == ''):
+        raise APIValidationError(f'Missing required field: {key}')
+
+    if value in (None, ''):
+        return default
+
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        raise APIValidationError(f'Field "{key}" must be a number')
+
+    if minimum is not None and value < minimum:
+        raise APIValidationError(f'Field "{key}" must be at least {minimum}')
+
+    if maximum is not None and value > maximum:
+        raise APIValidationError(f'Field "{key}" must be at most {maximum}')
+
+    return value
+
+
+def parse_profile(data):
+    allowed_goals = {
+        'Emergency Fund',
+        'Retirement',
+        'Wealth Creation',
+        'House Purchase',
+        'Child Education'
+    }
+
+    goal = (data.get('goal') or 'Wealth Creation').strip()
+    if goal not in allowed_goals:
+        raise APIValidationError('Invalid goal selected')
+
+    profile = {
+        'age': parse_int(data, 'age', default=30, minimum=18, maximum=100),
+        'income': parse_float(data, 'income', default=60000, minimum=0),
+        'expense': parse_float(data, 'expense', default=25000, minimum=0),
+        'savings': parse_float(data, 'savings', default=300000, minimum=0),
+        'debt': parse_float(data, 'debt', default=100000, minimum=0),
+        'dependents': parse_int(data, 'dependents', default=1, minimum=0, maximum=20),
+        'years': parse_int(data, 'years', default=10, minimum=1, maximum=60),
+        'goal': goal
+    }
+
+    return profile
+
+
+def default_nlp_result():
     return {
-        'annual_income': annual_income,
-        'annual_expenses': annual_expenses,
-        'annual_savings_capacity': annual_savings_capacity,
-        'savings_rate': round(savings_rate, 4),
-        'debt_to_income': round(debt_to_income, 4),
-        'emergency_months': round(emergency_months, 2),
-        'age': age,
-        'monthly_income': income,
-        'monthly_expenses': expense,
-        'current_savings': savings,
-        'existing_debt': debt,
-        'dependents': dependents,
-        'years_to_goal': years,
+        'original_text': '',
+        'preprocessing': {
+            'original_length': 0,
+            'token_count': 0,
+            'normalized': True,
+            'special_characters_removed': True
+        },
+        'sentiment': 'Neutral',
+        'sentiment_score': 0,
+        'positive_matches': 0,
+        'negative_matches': 0,
+        'category': 'general_finance',
+        'category_scores': {},
+        'keywords': [],
+        'entities': {
+            'organizations': [],
+            'economic_terms': [],
+            'financial_assets': [],
+            'numeric_values': []
+        },
+        'summary': ''
     }
 
 
-def detect_sentiment(text):
-    positive = {'growth', 'improves', 'support', 'resilience', 'recovery', 'strong', 'optimism', 'rally', 'expansion'}
-    negative = {'volatile', 'weak', 'uncertainty', 'correction', 'inflation', 'fall', 'crisis', 'recession', 'slowdown'}
-    words = set(text.lower().replace(',', ' ').replace('.', ' ').split())
-    score = len(words & positive) - len(words & negative)
-    if score > 0:
-        return 'Positive', score
-    if score < 0:
-        return 'Negative', score
-    return 'Neutral', score
+def safe_dict(value, default=None):
+    if isinstance(value, dict):
+        return value
+    return default if default is not None else {}
 
 
-def recommend_allocation(risk, years, sentiment):
-    base = {
-        'Conservative': {'Equity': 20, 'Debt': 55, 'Gold': 15, 'Cash': 10},
-        'Moderate': {'Equity': 45, 'Debt': 35, 'Gold': 10, 'Cash': 10},
-        'Aggressive': {'Equity': 70, 'Debt': 15, 'Gold': 5, 'Cash': 10},
-    }[risk].copy()
-    if years <= 3:
-        base['Debt'] += 10
-        base['Equity'] -= 10
-    if sentiment == 'Negative':
-        base['Cash'] += 5
-        base['Equity'] -= 5
-    elif sentiment == 'Positive' and years > 5:
-        base['Equity'] += 5
-        base['Debt'] -= 5
-    total = sum(base.values())
-    return {k: round(v * 100 / total, 1) for k, v in base.items()}
-
-
-def advice_list(risk, emergency, dti, savings_rate, sentiment):
-    tips = []
-    if emergency < 6:
-        tips.append('Build an emergency reserve of at least 6 months before increasing high-risk exposure.')
-    else:
-        tips.append('Liquidity position is healthy enough to support a disciplined long-term plan.')
-    if dti > 0.35:
-        tips.append('Reduce debt burden first because the current debt-to-income ratio is on the higher side.')
-    if savings_rate < 0.20:
-        tips.append('Increase savings rate above 20 percent to improve long-term portfolio readiness.')
-    if risk == 'Conservative':
-        tips.append('Capital preservation should stay central, with steady income instruments taking priority.')
-    elif risk == 'Moderate':
-        tips.append('A balanced allocation can support growth while controlling drawdown risk.')
-    else:
-        tips.append('Longer horizon supports higher equity allocation, but diversification should remain strict.')
-    if sentiment == 'Negative':
-        tips.append('Use staggered investing and periodic rebalancing while sentiment remains cautious.')
-    else:
-        tips.append('Maintain diversification and review allocation periodically as market conditions evolve.')
-    return tips[:4]
+def safe_list(value, default=None):
+    if isinstance(value, list):
+        return value
+    return default if default is not None else []
 
 
 @app.route('/')
 def index():
-    metrics = {
-        'accuracy': 0.91,
-        'precision': 0.90,
-        'recall': 0.89,
-        'f1': 0.89,
-        'roc_auc': 0.94,
-    }
-    feature_importance = []
-    if ART:
-        metrics = ART.get('metrics', metrics)
-        names = ART.get('feature_names', [])
-        vals = ART.get('feature_importance', [])
-        feature_importance = [
-            {'feature': str(n).replace('num__', '').replace('cat__goal_', 'Goal: '), 'importance': float(v)}
-            for n, v in sorted(zip(names, vals), key=lambda x: x[1], reverse=True)[:8]
-        ]
-    return render_template('index.html', metrics=metrics, feature_importance=feature_importance)
+    return render_template(
+        'index.html',
+        metrics=get_model_metrics(),
+        feature_importance=get_feature_importance(),
+        confusion_matrix=get_confusion_matrix(),
+        roc_curve=get_roc_curve_data()
+    )
 
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    data = request.get_json(force=True)
-    age = int(data.get('age', 30))
-    income = float(data.get('income', 60000))
-    expense = float(data.get('expense', 25000))
-    savings = float(data.get('savings', 300000))
-    debt = float(data.get('debt', 100000))
-    dependents = int(data.get('dependents', 1))
-    years = int(data.get('years', 10))
-    goal = data.get('goal', 'Wealth Creation')
-    news = data.get('news', '')
+    data = get_json_data()
+    profile = parse_profile(data)
 
-    feat = compute_features(age, income, expense, savings, debt, dependents, years)
-    sentiment, sentiment_score = detect_sentiment(news)
+    market_text = (data.get('news') or '').strip()
 
-    if ART and ART.get('model') is not None:
-        model = ART['model']
-        df = pd.DataFrame([{**feat, 'goal': goal}])
-        risk = model.predict(df)[0]
-        probs = model.predict_proba(df)[0]
-        confidence = float(np.max(probs))
-    else:
-        if feat['savings_rate'] < 0.15 or feat['debt_to_income'] > 0.45:
-            risk = 'Conservative'
-            confidence = 0.83
-        elif years >= 8 and feat['savings_rate'] >= 0.2:
-            risk = 'Aggressive'
-            confidence = 0.87
-        else:
-            risk = 'Moderate'
-            confidence = 0.85
+    nlp_result = analyze_text(market_text) if market_text else default_nlp_result()
+    nlp_result = safe_dict(nlp_result, default_nlp_result())
 
-    allocation = recommend_allocation(risk, years, sentiment)
-    health = max(0, min(100, int(55 + feat['savings_rate'] * 120 - feat['debt_to_income'] * 70 + min(feat['emergency_months'], 12) * 2)))
-    advice = advice_list(risk, feat['emergency_months'], feat['debt_to_income'], feat['savings_rate'], sentiment)
+    sentiment = nlp_result.get('sentiment', 'Neutral')
+
+    ml_result = predict_risk_profile(
+        age=profile['age'],
+        income=profile['income'],
+        expense=profile['expense'],
+        savings=profile['savings'],
+        debt=profile['debt'],
+        dependents=profile['dependents'],
+        years=profile['years'],
+        goal=profile['goal'],
+        sentiment=sentiment
+    )
+    ml_result = safe_dict(ml_result)
+
+    allocation = safe_dict(
+        ml_result.get('allocation'),
+        {'Equity': 45, 'Debt': 35, 'Gold': 10, 'Cash': 10}
+    )
+
+    dl_mode = 'stable'
+    if sentiment.lower() == 'positive':
+        dl_mode = 'bullish'
+    elif sentiment.lower() == 'negative':
+        dl_mode = 'bearish'
+
+    dl_result = safe_dict(simulate_dl_forecast(dl_mode))
+    dl_comparison = safe_dict(compare_with_ml_baseline())
+    scenarios = safe_list(simulate_scenarios(allocation))
+    slm_summary = generate_advice_summary(profile, ml_result, nlp_result)
+    recommendations = safe_list(generate_actionable_recommendations(profile, ml_result, nlp_result))
+    report = generate_report_snippet(profile, ml_result, nlp_result)
+    agent_result = safe_dict(run_agent(profile, ml_result, nlp_result, scenarios))
 
     return jsonify({
-        'risk': risk,
-        'confidence': round(confidence * 100, 1),
-        'financial_health': health,
-        'sentiment': sentiment,
-        'sentiment_score': sentiment_score,
-        'allocation': allocation,
-        'advice': advice,
-        'summary': {
-            'savings_rate': round(feat['savings_rate'] * 100, 1),
-            'debt_to_income': round(feat['debt_to_income'], 2),
-            'emergency_months': round(feat['emergency_months'], 1),
-            'annual_savings_capacity': round(feat['annual_savings_capacity'], 0),
-            'goal': goal,
-        }
+        'profile': profile,
+        'ml_result': ml_result,
+        'ml_evidence': safe_dict(get_ml_evidence_bundle()),
+        'nlp_result': nlp_result,
+        'nlp_evidence': safe_dict(get_nlp_evidence_bundle(market_text)) if market_text else None,
+        'dl_result': dl_result,
+        'dl_comparison': dl_comparison,
+        'dl_evidence': safe_dict(get_dl_evidence_bundle(dl_mode)),
+        'scenario_results': scenarios,
+        'genai_evidence': safe_dict(get_genai_evidence_bundle(allocation)),
+        'slm_summary': slm_summary,
+        'recommendations': recommendations,
+        'report': report,
+        'slm_evidence': safe_dict(get_slm_evidence_bundle(profile, ml_result, nlp_result)),
+        'agent_result': agent_result
+    })
+
+
+@app.route('/market-insights', methods=['POST'])
+def market_insights():
+    data = get_json_data()
+    text = (data.get('text') or '').strip()
+
+    if not text:
+        raise APIValidationError('Field "text" is required')
+
+    return jsonify(safe_dict(get_nlp_evidence_bundle(text)))
+
+
+@app.route('/trend-forecast', methods=['POST'])
+def trend_forecast():
+    data = get_json_data()
+    mode = (data.get('mode') or 'stable').strip().lower()
+
+    allowed_modes = {'stable', 'bullish', 'bearish'}
+    if mode not in allowed_modes:
+        raise APIValidationError('Field "mode" must be one of: stable, bullish, bearish')
+
+    return jsonify(safe_dict(get_dl_evidence_bundle(mode)))
+
+
+@app.route('/summarize', methods=['POST'])
+def summarize():
+    data = get_json_data()
+    profile = safe_dict(data.get('profile'))
+    ml_result = safe_dict(data.get('ml_result'))
+    nlp_result = safe_dict(data.get('nlp_result'), default_nlp_result())
+
+    return jsonify({
+        'summary': generate_advice_summary(profile, ml_result, nlp_result),
+        'report': generate_report_snippet(profile, ml_result, nlp_result),
+        'recommendations': safe_list(generate_actionable_recommendations(profile, ml_result, nlp_result)),
+        'slm_evidence': safe_dict(get_slm_evidence_bundle(profile, ml_result, nlp_result))
+    })
+
+
+@app.route('/simulate', methods=['POST'])
+def simulate():
+    data = get_json_data()
+    allocation = safe_dict(
+        data.get('allocation'),
+        {'Equity': 45, 'Debt': 35, 'Gold': 10, 'Cash': 10}
+    )
+
+    return jsonify(safe_dict(get_genai_evidence_bundle(allocation)))
+
+
+@app.route('/agent/run', methods=['POST'])
+def agent_run():
+    data = get_json_data()
+    profile = safe_dict(data.get('profile'))
+    ml_result = safe_dict(data.get('ml_result'))
+    nlp_result = safe_dict(data.get('nlp_result'), default_nlp_result())
+    scenario_results = safe_list(data.get('scenario_results'))
+
+    return jsonify(safe_dict(run_agent(profile, ml_result, nlp_result, scenario_results)))
+
+
+@app.route('/ask', methods=['POST'])
+def ask():
+    data = get_json_data()
+    query = (data.get('query') or '').strip()
+    profile = safe_dict(data.get('profile'))
+    ml_result = safe_dict(data.get('ml_result'))
+    nlp_result = safe_dict(data.get('nlp_result'), default_nlp_result())
+
+    if not query:
+        raise APIValidationError('Field "query" is required')
+
+    return jsonify({
+        'response': respond_to_user_query(query, profile, ml_result, nlp_result)
+    })
+
+
+@app.route('/ml-evidence', methods=['GET'])
+def ml_evidence():
+    return jsonify(safe_dict(get_ml_evidence_bundle()))
+
+
+@app.route('/nlp-evidence', methods=['POST'])
+def nlp_evidence():
+    data = get_json_data()
+    text = (data.get('text') or '').strip()
+
+    if not text:
+        raise APIValidationError('Field "text" is required')
+
+    return jsonify(safe_dict(get_nlp_evidence_bundle(text)))
+
+
+@app.route('/slm-evidence', methods=['POST'])
+def slm_evidence():
+    data = get_json_data()
+    profile = safe_dict(data.get('profile'))
+    ml_result = safe_dict(data.get('ml_result'))
+    nlp_result = safe_dict(data.get('nlp_result'), default_nlp_result())
+
+    return jsonify(safe_dict(get_slm_evidence_bundle(profile, ml_result, nlp_result)))
+
+
+@app.route('/genai-evidence', methods=['POST'])
+def genai_evidence():
+    data = get_json_data()
+    allocation = safe_dict(
+        data.get('allocation'),
+        {'Equity': 45, 'Debt': 35, 'Gold': 10, 'Cash': 10}
+    )
+
+    return jsonify(safe_dict(get_genai_evidence_bundle(allocation)))
+
+
+@app.route('/health')
+def health():
+    return jsonify({
+        'status': 'ok',
+        'modules': ['ML', 'DL', 'NLP', 'SLM', 'GenAI', 'AgenticAI'],
+        'available_routes': [
+            '/',
+            '/predict',
+            '/market-insights',
+            '/trend-forecast',
+            '/summarize',
+            '/simulate',
+            '/agent/run',
+            '/ask',
+            '/ml-evidence',
+            '/nlp-evidence',
+            '/slm-evidence',
+            '/genai-evidence',
+            '/health'
+        ]
     })
 
 

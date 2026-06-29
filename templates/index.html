@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wealth Planner Studio</title>
-  <link rel="preconnect" href="https://api.fontshare.com">
-  <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=cabinet-grotesk@500,700,800&display=swap" rel="stylesheet">
+
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=cabinet-grotesk@500,700,800&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
+  
+
   <header class="topbar">
     <div class="brand-wrap">
       <div class="logo" aria-label="Wealth Planner Studio logo">
@@ -24,11 +26,12 @@
         <h1>Wealth Planner Studio</h1>
       </div>
     </div>
+
     <div class="topbar-actions">
       <button class="theme-toggle" data-theme-toggle aria-label="Switch theme">
         <span>◐</span>
       </button>
-      <div class="status-pill">ML + Planning Dashboard</div>
+      <div class="status-pill">ML + DL + NLP + SLM + GenAI + Agentic AI</div>
     </div>
   </header>
 
@@ -36,9 +39,13 @@
     <section class="hero card hero-card">
       <div class="hero-copy">
         <p class="section-label">Financial planning engine</p>
-        <h2>Professional wealth planning with predictive profiling, portfolio mix, and advisor-style output.</h2>
-        <p class="hero-text">This dashboard combines structured financial inputs, risk classification, sentiment-aware allocation, and investor health scoring into one polished placement project interface.</p>
+        <h2>Professional wealth planning with predictive profiling, scenario insight, and advisor-ready recommendations.</h2>
+        <p class="hero-text">
+          This dashboard combines structured financial inputs, ML classification, NLP sentiment interpretation,
+          allocation guidance, scenario analysis, and autonomous recommendation logic in one polished interface.
+        </p>
       </div>
+
       <div class="hero-kpis">
         <article class="mini-stat">
           <span>Accuracy</span>
@@ -61,43 +68,44 @@
           <p class="section-label">Investor inputs</p>
           <h3>Profile workspace</h3>
         </div>
+
         <form id="plannerForm" class="planner-form">
           <div class="field-grid two-col">
             <label>
               <span>Age</span>
-              <input type="number" name="age" value="30" min="18" max="60" step="1" required>
+              <input type="number" name="age" value="30" min="18" max="60" step="1" required />
             </label>
             <label>
               <span>Dependents</span>
-              <input type="number" name="dependents" value="1" min="0" max="6" required>
+              <input type="number" name="dependents" value="1" min="0" max="6" required />
             </label>
           </div>
 
           <label>
             <span>Monthly income (INR)</span>
-            <input type="number" name="income" value="60000" min="20000" step="1000" required>
+            <input type="number" name="income" value="60000" min="20000" step="1000" required />
           </label>
 
           <label>
             <span>Monthly expenses (INR)</span>
-            <input type="number" name="expense" value="25000" min="10000" step="1000" required>
+            <input type="number" name="expense" value="25000" min="10000" step="1000" required />
           </label>
 
           <div class="field-grid two-col">
             <label>
               <span>Current savings (INR)</span>
-              <input type="number" name="savings" value="300000" min="0" step="1000" required>
+              <input type="number" name="savings" value="300000" min="0" step="1000" required />
             </label>
             <label>
               <span>Existing debt (INR)</span>
-              <input type="number" name="debt" value="100000" min="0" step="1000" required>
+              <input type="number" name="debt" value="100000" min="0" step="1000" required />
             </label>
           </div>
 
           <div class="field-grid two-col">
             <label>
               <span>Years to goal</span>
-              <input type="number" name="years" value="10" min="1" max="30" required>
+              <input type="number" name="years" value="10" min="1" max="30" required />
             </label>
             <label>
               <span>Primary goal</span>
@@ -127,16 +135,19 @@
             <strong id="riskLabel">Moderate</strong>
             <p id="riskSub">Awaiting analysis</p>
           </article>
+
           <article class="card kpi-card">
             <span class="metric-label">Confidence</span>
             <strong id="confidenceValue">--</strong>
             <p>Model-backed decision score</p>
           </article>
+
           <article class="card kpi-card">
             <span class="metric-label">Financial health</span>
             <strong id="healthValue">--</strong>
             <p>Composite investor readiness</p>
           </article>
+
           <article class="card kpi-card">
             <span class="metric-label">Market sentiment</span>
             <strong id="sentimentValue">--</strong>
@@ -145,7 +156,7 @@
         </div>
 
         <div class="results-grid">
-          <section class="card chart-card">
+          <section class="card">
             <div class="card-head inline-head">
               <div>
                 <p class="section-label">Portfolio mix</p>
@@ -158,7 +169,7 @@
             </div>
           </section>
 
-          <section class="card summary-card">
+          <section class="card">
             <div class="card-head">
               <p class="section-label">Investor metrics</p>
               <h3>Planning summary</h3>
@@ -184,8 +195,8 @@
           </section>
         </div>
 
-        <div class="results-grid lower-grid">
-          <section class="card advice-panel">
+        <div class="results-grid">
+          <section class="card">
             <div class="card-head">
               <p class="section-label">Advisor notes</p>
               <h3>Recommended actions</h3>
@@ -198,7 +209,7 @@
             </div>
           </section>
 
-          <section class="card insights-panel">
+          <section class="card">
             <div class="card-head">
               <p class="section-label">Model evidence</p>
               <h3>Feature importance</h3>
@@ -208,7 +219,9 @@
                 {% for item in feature_importance %}
                   <div class="feature-row">
                     <span>{{ item.feature }}</span>
-                    <div class="feature-bar"><i style="width: {{ (item.importance * 100)|round(1) }}%"></i></div>
+                    <div class="feature-bar">
+                      <i style="width: {{ (item.importance * 100)|round(1) }}%"></i>
+                    </div>
                   </div>
                 {% endfor %}
               {% else %}
@@ -219,12 +232,137 @@
             </div>
           </section>
         </div>
+
+        <div class="results-grid">
+          <section class="card">
+            <div class="card-head">
+              <p class="section-label">NLP output</p>
+              <h3>Market text analysis</h3>
+            </div>
+            <div class="summary-grid">
+              <article>
+                <span>Category</span>
+                <strong id="nlpCategory">--</strong>
+              </article>
+              <article>
+                <span>Keywords</span>
+                <strong id="nlpKeywords">--</strong>
+              </article>
+              <article>
+                <span>Organizations</span>
+                <strong id="nlpOrganizations">--</strong>
+              </article>
+              <article>
+                <span>Summary</span>
+                <strong id="nlpSummary">--</strong>
+              </article>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <p class="section-label">Deep learning</p>
+              <h3>Trend forecast</h3>
+            </div>
+            <div class="summary-grid">
+              <article>
+                <span>Trend</span>
+                <strong id="dlTrend">--</strong>
+              </article>
+              <article>
+                <span>Confidence</span>
+                <strong id="dlConfidence">--</strong>
+              </article>
+              <article>
+                <span>Volatility</span>
+                <strong id="dlVolatility">--</strong>
+              </article>
+              <article>
+                <span>DL vs ML</span>
+                <strong id="dlImprovement">--</strong>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <div class="results-grid equal-row">
+          <section class="card compact-card">
+            <div class="card-head">
+              <p class="section-label">SLM output</p>
+              <h3>Advisory summary</h3>
+            </div>
+            <div id="slmSummary" class="text-panel scroll-panel">
+              A concise advisory summary will appear here after prediction.
+            </div>
+          </section>
+
+          <section class="card compact-card">
+            <div class="card-head">
+              <p class="section-label">Agentic AI</p>
+              <h3>Autonomous decision</h3>
+            </div>
+            <div class="summary-grid two-tile">
+              <article>
+                <span>Priority</span>
+                <strong id="agentPriority">--</strong>
+              </article>
+              <article>
+                <span>Safety</span>
+                <strong id="agentSafety">--</strong>
+              </article>
+            </div>
+            <div class="text-panel action-panel">
+              <p class="mini-label">Action</p>
+              <strong id="agentAction">--</strong>
+              <p class="mini-label action-spacer">Human review</p>
+              <strong id="agentHumanLoop">--</strong>
+            </div>
+          </section>
+        </div>
+
+        <section class="card scenario-section">
+          <div class="card-head">
+            <p class="section-label">Generative AI</p>
+            <h3>Scenario stress testing</h3>
+          </div>
+          <div id="scenarioList" class="scenario-grid">
+            <div class="empty-state compact">
+              <p>Scenario simulation will appear after generating a recommendation.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="results-grid evidence-row">
+          <section class="card compact-card">
+            <div class="card-head">
+              <p class="section-label">ML evidence</p>
+              <h3>Confusion matrix</h3>
+            </div>
+            <div id="confusionMatrixBox" class="matrix-table">
+              <div class="empty-state compact">
+                <p>Confusion matrix will appear here.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="card compact-card">
+            <div class="card-head">
+              <p class="section-label">ROC evidence</p>
+              <h3>ROC curve summary</h3>
+            </div>
+            <div id="rocBox" class="text-panel compact">
+              ROC information will appear here.
+            </div>
+          </section>
+        </div>
       </section>
     </section>
   </main>
 
   <script>
     window.initialMetrics = {{ metrics|tojson }};
+    window.initialConfusionMatrix = {{ confusion_matrix|tojson }};
+    window.initialRocCurve = {{ roc_curve|tojson }};
   </script>
   <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 </body>
