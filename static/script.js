@@ -78,12 +78,22 @@ form.addEventListener('submit', async (e) => {
   const payload = Object.fromEntries(new FormData(form).entries());
 
   try {
-    const response = await fetch('/predict', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json();
+  const response = await fetch('/predict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  const data = await response.json();
+  console.log(data);
+} catch (error) {
+  console.error('Fetch error:', error);
+}
 
     riskLabel.textContent = data.risk;
     riskSub.textContent = riskTone(data.risk);
