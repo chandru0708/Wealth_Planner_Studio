@@ -30,8 +30,8 @@ let allocationChart = new Chart(chartCtx, {
       data: [45, 35, 10, 10],
       backgroundColor: ['#01696f', '#0f5d8c', '#b8860b', '#8b9095'],
       borderWidth: 0,
-      hoverOffset: 8,
-    }],
+      hoverOffset: 8
+    }]
   },
   options: {
     responsive: true,
@@ -44,11 +44,11 @@ let allocationChart = new Chart(chartCtx, {
           color: '#9ba3a7',
           usePointStyle: true,
           boxWidth: 10,
-          padding: 18,
-        },
-      },
-    },
-  },
+          padding: 18
+        }
+      }
+    }
+  }
 });
 
 function formatINR(value) {
@@ -60,7 +60,10 @@ function renderAdvice(items) {
     adviceList.innerHTML = '<div class="empty-state compact"><p>No recommendations available.</p></div>';
     return;
   }
-  adviceList.innerHTML = items.map(item => `<article class="advice-item">${item}</article>`).join('');
+
+  adviceList.innerHTML = items
+    .map(item => `<article class="advice-item">${item}</article>`)
+    .join('');
 }
 
 function riskTone(risk) {
@@ -71,6 +74,7 @@ function riskTone(risk) {
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+
   const btn = form.querySelector('button[type="submit"]');
   btn.disabled = true;
   btn.textContent = 'Analyzing...';
@@ -78,41 +82,50 @@ form.addEventListener('submit', async (e) => {
   const payload = Object.fromEntries(new FormData(form).entries());
 
   try {
-  const response = await fetch('/predict', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+    const response = await fetch('/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`HTTP ${response.status}: ${errorText}`);
-  }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
 
-  const data = await response.json();
-  console.log(data);
-} catch (error) {
-  console.error('Fetch error:', error);
-}
+    const data = await response.json();
+    console.log('Prediction response:', data);
 
-    riskLabel.textContent = data.risk;
-    riskSub.textContent = riskTone(data.risk);
-    confidenceValue.textContent = `${data.confidence}%`;
-    healthValue.textContent = `${data.financial_health}/100`;
-    sentimentValue.textContent = `${data.sentiment} (${data.sentiment_score > 0 ? '+' : ''}${data.sentiment_score})`;
-    savingsRate.textContent = `${data.summary.savings_rate}%`;
-    dtiValue.textContent = data.summary.debt_to_income;
-    emergencyValue.textContent = `${data.summary.emergency_months} months`;
-    annualSaveValue.textContent = `₹${formatINR(data.summary.annual_savings_capacity)}`;
-    goalBadge.textContent = data.summary.goal;
+    riskLabel.textContent = data.risk ?? '--';
+    riskSub.textContent = riskTone(data.risk ?? 'Moderate');
+    confidenceValue.textContent = data.confidence !== undefined ? `${data.confidence}%` : '--';
+    healthValue.textContent = data.financial_health !== undefined ? `${data.financial_health}/100` : '--';
+    sentimentValue.textContent =
+      data.sentiment !== undefined && data.sentiment_score !== undefined
+        ? `${data.sentiment} (${data.sentiment_score > 0 ? '+' : ''}${data.sentiment_score})`
+        : '--';
 
-    allocationChart.data.labels = Object.keys(data.allocation);
-    allocationChart.data.datasets[0].data = Object.values(data.allocation);
-    allocationChart.update();
+    savingsRate.textContent = data.summary?.savings_rate !== undefined ? `${data.summary.savings_rate}%` : '--';
+    dtiValue.textContent = data.summary?.debt_to_income ?? '--';
+    emergencyValue.textContent = data.summary?.emergency_months !== undefined
+      ? `${data.summary.emergency_months} months`
+      : '--';
+    annualSaveValue.textContent = data.summary?.annual_savings_capacity !== undefined
+      ? `₹${formatINR(data.summary.annual_savings_capacity)}`
+      : '--';
+    goalBadge.textContent = data.summary?.goal ?? 'Wealth Creation';
+
+    if (data.allocation) {
+      allocationChart.data.labels = Object.keys(data.allocation);
+      allocationChart.data.datasets[0].data = Object.values(data.allocation);
+      allocationChart.update();
+    }
 
     renderAdvice(data.advice);
   } catch (error) {
-    adviceList.innerHTML = '<div class="empty-state compact"><p>Unable to generate recommendation. Check backend and model artifact path.</p></div>';
+    console.error('Fetch error:', error);
+    adviceList.innerHTML =
+      '<div class="empty-state compact"><p>Unable to generate recommendation. Check backend response, model artifact path, or JSON key names.</p></div>';
   } finally {
     btn.disabled = false;
     btn.textContent = 'Generate Recommendation';
