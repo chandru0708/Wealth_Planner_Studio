@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wealth Planner Studio</title>
+  <link rel="preconnect" href="https://api.fontshare.com">
+  <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=cabinet-grotesk@500,700,800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar">
+    <div class="brand-wrap">
+      <div class="logo" aria-label="Wealth Planner Studio logo">
+        <svg viewBox="0 0 48 48" fill="none" role="img" aria-hidden="true">
+          <rect x="4" y="4" width="40" height="40" rx="12" stroke="currentColor" stroke-width="2"></rect>
+          <path d="M14 30L21 22L26 27L34 17" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M30 17H34V21" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </div>
+      <div>
+        <h1>Wealth Planner Studio</h1>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="theme-toggle" data-theme-toggle aria-label="Switch theme">
+        <span>◐</span>
+      </button>
+      <div class="status-pill">ML + Planning Dashboard</div>
+    </div>
+  </header>
+
+  <main id="main" class="page-shell">
+    <section class="hero card hero-card">
+      <div class="hero-copy">
+        <p class="section-label">Financial planning engine</p>
+        <h2>Professional wealth planning with predictive profiling, portfolio mix, and advisor-style output.</h2>
+        <p class="hero-text">This dashboard combines structured financial inputs, risk classification, sentiment-aware allocation, and investor health scoring into one polished placement project interface.</p>
+      </div>
+      <div class="hero-kpis">
+        <article class="mini-stat">
+          <span>Accuracy</span>
+          <strong>{{ '%.1f'|format(metrics.accuracy * 100) }}%</strong>
+        </article>
+        <article class="mini-stat">
+          <span>F1 Score</span>
+          <strong>{{ '%.1f'|format(metrics.f1 * 100) }}%</strong>
+        </article>
+        <article class="mini-stat">
+          <span>ROC-AUC</span>
+          <strong>{{ '%.1f'|format(metrics.roc_auc * 100) }}%</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="dashboard-grid">
+      <aside class="card form-card">
+        <div class="card-head">
+          <p class="section-label">Investor inputs</p>
+          <h3>Profile workspace</h3>
+        </div>
+        <form id="plannerForm" class="planner-form">
+          <div class="field-grid two-col">
+            <label>
+              <span>Age</span>
+              <input type="number" name="age" value="30" min="21" max="60" required>
+            </label>
+            <label>
+              <span>Dependents</span>
+              <input type="number" name="dependents" value="1" min="0" max="6" required>
+            </label>
+          </div>
+
+          <label>
+            <span>Monthly income (INR)</span>
+            <input type="number" name="income" value="60000" min="20000" step="5000" required>
+          </label>
+
+          <label>
+            <span>Monthly expenses (INR)</span>
+            <input type="number" name="expense" value="25000" min="10000" step="5000" required>
+          </label>
+
+          <div class="field-grid two-col">
+            <label>
+              <span>Current savings (INR)</span>
+              <input type="number" name="savings" value="300000" min="0" step="10000" required>
+            </label>
+            <label>
+              <span>Existing debt (INR)</span>
+              <input type="number" name="debt" value="100000" min="0" step="10000" required>
+            </label>
+          </div>
+
+          <div class="field-grid two-col">
+            <label>
+              <span>Years to goal</span>
+              <input type="number" name="years" value="10" min="1" max="30" required>
+            </label>
+            <label>
+              <span>Primary goal</span>
+              <select name="goal">
+                <option>Emergency Fund</option>
+                <option>Retirement</option>
+                <option selected>Wealth Creation</option>
+                <option>House Purchase</option>
+                <option>Child Education</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            <span>Market note / analyst headline</span>
+            <textarea name="news" rows="4">Central bank signals support for long term growth outlook and improving liquidity conditions</textarea>
+          </label>
+
+          <button type="submit" class="primary-btn">Generate Recommendation</button>
+        </form>
+      </aside>
+
+      <section class="results-zone">
+        <div class="kpi-row">
+          <article class="card kpi-card">
+            <span class="metric-label">Investor profile</span>
+            <strong id="riskLabel">Moderate</strong>
+            <p id="riskSub">Awaiting analysis</p>
+          </article>
+          <article class="card kpi-card">
+            <span class="metric-label">Confidence</span>
+            <strong id="confidenceValue">--</strong>
+            <p>Model-backed decision score</p>
+          </article>
+          <article class="card kpi-card">
+            <span class="metric-label">Financial health</span>
+            <strong id="healthValue">--</strong>
+            <p>Composite investor readiness</p>
+          </article>
+          <article class="card kpi-card">
+            <span class="metric-label">Market sentiment</span>
+            <strong id="sentimentValue">--</strong>
+            <p>Headline interpretation</p>
+          </article>
+        </div>
+
+        <div class="results-grid">
+          <section class="card chart-card">
+            <div class="card-head inline-head">
+              <div>
+                <p class="section-label">Portfolio mix</p>
+                <h3>Suggested allocation</h3>
+              </div>
+              <div class="badge" id="goalBadge">Wealth Creation</div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="allocationChart"></canvas>
+            </div>
+          </section>
+
+          <section class="card summary-card">
+            <div class="card-head">
+              <p class="section-label">Investor metrics</p>
+              <h3>Planning summary</h3>
+            </div>
+            <div class="summary-grid">
+              <article>
+                <span>Savings rate</span>
+                <strong id="savingsRate">--</strong>
+              </article>
+              <article>
+                <span>Debt / income</span>
+                <strong id="dtiValue">--</strong>
+              </article>
+              <article>
+                <span>Emergency fund</span>
+                <strong id="emergencyValue">--</strong>
+              </article>
+              <article>
+                <span>Annual savings</span>
+                <strong id="annualSaveValue">--</strong>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <div class="results-grid lower-grid">
+          <section class="card advice-panel">
+            <div class="card-head">
+              <p class="section-label">Advisor notes</p>
+              <h3>Recommended actions</h3>
+            </div>
+            <div id="adviceList" class="advice-list">
+              <div class="empty-state">
+                <h4>Ready for analysis</h4>
+                <p>Fill the investor profile and generate a recommendation to view action points.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="card insights-panel">
+            <div class="card-head">
+              <p class="section-label">Model evidence</p>
+              <h3>Feature importance</h3>
+            </div>
+            <div class="feature-list">
+              {% if feature_importance %}
+                {% for item in feature_importance %}
+                  <div class="feature-row">
+                    <span>{{ item.feature }}</span>
+                    <div class="feature-bar"><i style="width: {{ (item.importance * 100)|round(1) }}%"></i></div>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="empty-state compact">
+                  <p>Feature importance will appear here after loading model artifacts.</p>
+                </div>
+              {% endif %}
+            </div>
+          </section>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    window.initialMetrics = {{ metrics|tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+</body>
+</html>
