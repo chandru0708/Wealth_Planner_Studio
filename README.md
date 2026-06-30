@@ -1,6 +1,6 @@
 # Wealth Planner Studio - AI Powered Personalized Financial Planning & Wealth Management
 
-![Wealth Planner Studio Banner](https://via.placeholder.com/1600x800.png?text=Wealth+Planner+Studio)
+![Wealth Planner Studio Banner](assets/images/WPS_logo.png)
 
 **An AI-powered financial advisory dashboard that combines Machine Learning, Deep Learning, NLP, SLM, Generative AI, and Agentic AI to deliver personalized investment recommendations, explainable risk profiling, and scenario-based wealth planning.**
 
