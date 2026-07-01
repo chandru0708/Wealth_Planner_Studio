@@ -10,7 +10,7 @@ def assess_action_priority(ml_result, nlp_result, scenario_results):
         s for s in scenario_results
         if s.get('stress_result', {}).get('projected_return_pct', 0) < -8
     ]
-
+ 
     if risk == 'Conservative' and sentiment == 'Negative' and severe_scenarios:
         return 'High'
     if health < 45 or len(severe_scenarios) >= 2:
